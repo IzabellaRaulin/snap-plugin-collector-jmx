@@ -1,0 +1,23 @@
+{
+    "version": 1,
+    "schedule": {
+        "type": "simple",
+        "interval": "1s"
+    },
+    "workflow": {
+        "collect": {
+            "metrics": {
+                "/staples/jmx/*": {}
+            },
+            "config": {},
+            "process": null,
+            "publish": [
+                {
+                    "plugin_name": "file",
+                    "config": {
+                        "file": "/tmp/jmx_snap_log.out"
+                    }
+                }
+            ]
+        }
+    }
