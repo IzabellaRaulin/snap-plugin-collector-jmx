@@ -4,8 +4,9 @@
 			"collector": {
 				"jmx": {
 					"all": {
+                                          "jmx_app_name": "jmx",
                                           "jmx_connection_url": "http://localhost:8080/jolokia/+service:jmx:rmi:///jndi/rmi://localhost:9180/jmxrmi",
-				          "jmx_mbean_cfg" : "read^java.lang:type=Threading^AllThreadIds|read^java.lang:type=Memory|read^metrics:name=com.rackspacecloud.blueflood.http.DefaultHandler.HTTP response sending timer"
+				          "jmx_mbean_cfg": "read^java.lang:type=Threading^AllThreadIds|read^java.lang:type=Memory|read^metrics:name=com.rackspacecloud.blueflood.http.DefaultHandler.HTTP response sending timer"
 					}
 				}
 			}

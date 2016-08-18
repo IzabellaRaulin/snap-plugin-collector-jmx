@@ -49,6 +49,7 @@ var (
 	errReqFailed    = errors.New("Request to jmx webserver failed")
 	errConfigReadError = errors.New("Config read Error")
 	errMbeanCfg = errors.New("mbean Config read Error")
+	errAppnameCfg = errors.New("App Name Config read Error")
         errAttrNotFound = errors.New("Attribute Not Found Exeception")
         errConnRefused = errors.New("Connection refused to host")
 )    	 
@@ -190,7 +191,7 @@ func postQuery(webserver string, jsonStr []byte)([]byte, error) {
 
 
 //Get Metrics from given Jmx and Jolokia URL
-func getMetrics(webserver string, mbean string, metrics []string)(mts []plugin.MetricType, err error) {
+func getMetrics(appname string, webserver string, mbean string, metrics []string)(mts []plugin.MetricType, err error) {
 
     arrWebSer := strings.Split(webserver,"|")
     //log.Println("arrWebSer =",arrWebSer,"len arrWebSer =",len(arrWebSer))
@@ -269,7 +270,7 @@ func getMetrics(webserver string, mbean string, metrics []string)(mts []plugin.M
                value := jFmt["value"]
                val := value.(map[string]interface{})
 
-               pk :="staples"+"/"+"jmx"+"/" + mb["mbean"].(string)
+               pk :="staples"+"/"+appname+"/" + mb["mbean"].(string)
 
                //parser metrics
                parseMetrics(&mts, val, pk)
@@ -291,6 +292,7 @@ func getMetrics(webserver string, mbean string, metrics []string)(mts []plugin.M
 func (j *Jmx) CollectMetrics(inmts []plugin.MetricType) ( mts []plugin.MetricType, err error) {
     webservercfg := inmts[0].Config().Table()["jmx_connection_url"]
     mbeancfg := inmts[0].Config().Table()["jmx_mbean_cfg"]
+    appnamecfg := inmts[0].Config().Table()["jmx_app_name"]
 
     if webservercfg == nil || mbeancfg == nil {
        return nil, errConfigReadError
@@ -306,7 +308,12 @@ func (j *Jmx) CollectMetrics(inmts []plugin.MetricType) ( mts []plugin.MetricTyp
        return nil, errMbeanCfg
     }
 
-    mts, err = getMetrics(webserver.Value,  mbean.Value, []string{})
+    appname, ok := appnamecfg.(ctypes.ConfigValueStr)
+    if !ok {
+       return nil, errAppnameCfg
+    }
+
+    mts, err = getMetrics(appname.Value, webserver.Value,  mbean.Value, []string{})
 
     return mts, err
 }
@@ -315,6 +322,7 @@ func (j *Jmx) CollectMetrics(inmts []plugin.MetricType) ( mts []plugin.MetricTyp
 func (j *Jmx) GetMetricTypes(cfg plugin.ConfigType) (mts []plugin.MetricType, err error) {
     webservercfg := cfg.Table()["jmx_connection_url"]
     mbeancfg := cfg.Table()["jmx_mbean_cfg"]
+    appnamecfg := cfg.Table()["jmx_app_name"]
 
     if webservercfg == nil || mbeancfg == nil {
        return nil, errConfigReadError
@@ -330,7 +338,12 @@ func (j *Jmx) GetMetricTypes(cfg plugin.ConfigType) (mts []plugin.MetricType, er
        return nil, errMbeanCfg
     }
 
-    mts, err = getMetrics(webserver.Value,  mbean.Value, []string{})
+    appname, ok := appnamecfg.(ctypes.ConfigValueStr)
+    if !ok {
+       return nil, errAppnameCfg
+    }
+
+    mts, err = getMetrics(appname.Value, webserver.Value,  mbean.Value, []string{})
 
 //    log.Println("GetMereicsTypes mts =", mts, "err =",err)
 
@@ -342,6 +355,8 @@ func (j *Jmx) GetMetricTypes(cfg plugin.ConfigType) (mts []plugin.MetricType, er
 func (j *Jmx) GetConfigPolicy() (*cpolicy.ConfigPolicy, error) {
     cfg := cpolicy.New()
 
+    appname,_ := cpolicy.NewStringRule("jmx_app_name", true ,"jmx")
+
     connrule,_ := cpolicy.NewStringRule("jmx_connection_url", true ,"http://localhost:8080/jolokia/+service:jmx:rmi:///jndi/rmi://localhost:9180/jmxrmi")
 
     mbeancfgrule,_ := cpolicy.NewStringRule("jmx_mbean_cfg", true ,"read,java.lang:type=Threading|read,java.lang:type=OperatingSystem")
@@ -349,6 +364,7 @@ func (j *Jmx) GetConfigPolicy() (*cpolicy.ConfigPolicy, error) {
     policy := cpolicy.NewPolicyNode()
     policy.Add(connrule)
     policy.Add(mbeancfgrule)
+    policy.Add(appname)
 
     cfg.Add([]string{"staples","jmx"},policy)
 
