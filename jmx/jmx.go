@@ -36,7 +36,7 @@ import (
 
 const (
 	// Name of plugin
-		Name = "Jmx"
+		Name = "jmx"
 	// Version of plugin
 		Version = 1
 	// Type of plugin
@@ -270,13 +270,13 @@ func getMetrics(appname string, webserver string, mbean string, metrics []string
                value := jFmt["value"]
                val := value.(map[string]interface{})
 
-               pk :="staples"+"/"+appname+"/" + mb["mbean"].(string)
+               pk :="staples" +"/" +"jmx" +"/" +appname + "/" + mb["mbean"].(string)
 
                //parser metrics
                parseMetrics(&mts, val, pk)
                
             } else {
-              log.Println("Http Responce status = ", jFmt) 
+              //log.Println("Http Responce status = ", jFmt) 
             }
 
         }//Loop for mbean
@@ -290,11 +290,13 @@ func getMetrics(appname string, webserver string, mbean string, metrics []string
 
 //CollectMetrics API definition
 func (j *Jmx) CollectMetrics(inmts []plugin.MetricType) ( mts []plugin.MetricType, err error) {
+    appnamecfg := inmts[0].Config().Table()["jmx_app_name"]
     webservercfg := inmts[0].Config().Table()["jmx_connection_url"]
     mbeancfg := inmts[0].Config().Table()["jmx_mbean_cfg"]
-    appnamecfg := inmts[0].Config().Table()["jmx_app_name"]
 
-    if webservercfg == nil || mbeancfg == nil {
+    //log.Println("appnamecfg",appnamecfg,"webservercfg =",webservercfg,"mbeancfg=",mbeancfg)
+
+    if appnamecfg == nil || webservercfg == nil || mbeancfg == nil {
        return nil, errConfigReadError
     }
 
@@ -320,11 +322,13 @@ func (j *Jmx) CollectMetrics(inmts []plugin.MetricType) ( mts []plugin.MetricTyp
 
 //GetMetricTypes API definition
 func (j *Jmx) GetMetricTypes(cfg plugin.ConfigType) (mts []plugin.MetricType, err error) {
+    appnamecfg := cfg.Table()["jmx_app_name"]
     webservercfg := cfg.Table()["jmx_connection_url"]
     mbeancfg := cfg.Table()["jmx_mbean_cfg"]
-    appnamecfg := cfg.Table()["jmx_app_name"]
 
-    if webservercfg == nil || mbeancfg == nil {
+    //log.Println("appnamecfg",appnamecfg,"webservercfg =",webservercfg,"mbeancfg=",mbeancfg)
+
+    if appnamecfg == nil || webservercfg == nil || mbeancfg == nil {
        return nil, errConfigReadError
     }
 
@@ -362,9 +366,9 @@ func (j *Jmx) GetConfigPolicy() (*cpolicy.ConfigPolicy, error) {
     mbeancfgrule,_ := cpolicy.NewStringRule("jmx_mbean_cfg", true ,"read,java.lang:type=Threading|read,java.lang:type=OperatingSystem")
 
     policy := cpolicy.NewPolicyNode()
+    policy.Add(appname)
     policy.Add(connrule)
     policy.Add(mbeancfgrule)
-    policy.Add(appname)
 
     cfg.Add([]string{"staples","jmx"},policy)
 
