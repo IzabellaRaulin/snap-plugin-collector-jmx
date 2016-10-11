@@ -36,22 +36,23 @@ import (
 
 const (
 	// Name of plugin
-		Name = "jmx"
+	Name = "jmx"
 	// Version of plugin
-		Version = 1
+	Version = 1
 	// Type of plugin
-		Type = plugin.CollectorPluginType
+	Type = plugin.CollectorPluginType
+
+        HTTP_200_OK = 200
+        HTTP_CONN_TIME_OUT = 3
 )
 
 var (
-        errNoWebserver  = errors.New("Connection url config required. Check your config JSON file")
-	errBadWebserver = errors.New("Failed to parse given connection url")
-	errReqFailed    = errors.New("Request to jmx webserver failed")
-	errConfigReadError = errors.New("Config read Error")
-	errMbeanCfg = errors.New("mbean Config read Error")
-	errAppnameCfg = errors.New("App Name Config read Error")
-        errAttrNotFound = errors.New("Attribute Not Found Exeception")
-        errConnRefused = errors.New("Connection refused to host")
+	ErrorJmxServerUrlCfg = errors.New("Failed to parse given connection url")
+	ErrorConfigRead = errors.New("Config read Error")
+	ErrorJmxMBeanCfg = errors.New("mbean Config read Error")
+	ErrorJmxAppNameCfg = errors.New("App Name Config read Error")
+        ErrorAttrNotFound = errors.New("Attribute Not Found Exeception")
+        ErrorConnRefused = errors.New("Connection refused to host")
 )    	 
 
 // make sure that we actually satisify requierd interface
@@ -93,9 +94,8 @@ func checkIgnoreMetric(mkey string)(bool) {
 
 //Get Namespace based on snap requirment
 func getNamespace(mkey string) (ns core.Namespace) {
-    rc := strings.Replace(mkey, ".", "-", -1)
-    rc = strings.Replace(rc, ",", "-", -1)
-    rc = strings.Replace(rc, " ", "-", -1)
+    replacer := strings.NewReplacer(".", "-", ",", "-", " ", "-")
+    rc := replacer.Replace(mkey)
     ss := strings.Split(rc, "/")
     ns = core.NewNamespace(ss...)
     return ns
@@ -161,18 +161,17 @@ func postQuery(webserver string, jsonStr []byte)([]byte, error) {
 
     //log.Println("req =",req)
 
-    timeout := time.Duration(3 * time.Second)
+    timeout := time.Duration(HTTP_CONN_TIME_OUT * time.Second)
 
     client := &http.Client{
                 Timeout: timeout,
               }
     resp, err := client.Do(req)
-
     //log.Println("resp =",resp,"err =", err)
-
     if err != nil {
        return nil, err 
     }
+
     defer resp.Body.Close()
 
     //log.Println("response Status:", resp.Status)
@@ -181,9 +180,9 @@ func postQuery(webserver string, jsonStr []byte)([]byte, error) {
     //log.Println("response Body:", string(body))
 
     if  strings.Contains(string(body),"AttributeNotFoundException") == true {
-      return nil,errAttrNotFound
+      return nil,ErrorAttrNotFound
     } else if strings.Contains(string(body),"Connection refused to host") == true {
-      return nil,errConnRefused
+      return nil,ErrorConnRefused
     }
 
     return body, err
@@ -256,7 +255,7 @@ func getMetrics(appname string, webserver string, mbean string, metrics []string
 
             //Check status is 200OK
             status := jFmt["status"]
-            if float64(200) == status {
+            if HTTP_200_OK == status.(int) {
 
                request := jFmt["request"]
 
@@ -290,64 +289,66 @@ func getMetrics(appname string, webserver string, mbean string, metrics []string
 
 //CollectMetrics API definition
 func (j *Jmx) CollectMetrics(inmts []plugin.MetricType) ( mts []plugin.MetricType, err error) {
-    appnamecfg := inmts[0].Config().Table()["jmx_app_name"]
-    webservercfg := inmts[0].Config().Table()["jmx_connection_url"]
-    mbeancfg := inmts[0].Config().Table()["jmx_mbean_cfg"]
 
-    //log.Println("appnamecfg",appnamecfg,"webservercfg =",webservercfg,"mbeancfg=",mbeancfg)
+    jmxAppNameCfg := inmts[0].Config().Table()["jmx_app_name"]
+    jmxServerUrlCfg := inmts[0].Config().Table()["jmx_connection_url"]
+    jmxMBeanCfg := inmts[0].Config().Table()["jmx_mbean_cfg"]
 
-    if appnamecfg == nil || webservercfg == nil || mbeancfg == nil {
-       return nil, errConfigReadError
+
+    if jmxAppNameCfg == nil || jmxServerUrlCfg == nil || jmxMBeanCfg == nil {
+       return nil, ErrorConfigRead
     }
 
-    webserver, ok := webservercfg.(ctypes.ConfigValueStr)
+    jmxServer, ok := jmxServerUrlCfg.(ctypes.ConfigValueStr)
     if !ok {
-       return nil, errBadWebserver
+       return nil, ErrorJmxServerUrlCfg
     }
 
-    mbean, ok := mbeancfg.(ctypes.ConfigValueStr)
+    jmxMBean, ok := jmxMBeanCfg.(ctypes.ConfigValueStr)
     if !ok {
-       return nil, errMbeanCfg
+       return nil, ErrorJmxMBeanCfg
     }
 
-    appname, ok := appnamecfg.(ctypes.ConfigValueStr)
+    jmxAppName, ok := jmxAppNameCfg.(ctypes.ConfigValueStr)
     if !ok {
-       return nil, errAppnameCfg
+       return nil, ErrorJmxAppNameCfg
     }
 
-    mts, err = getMetrics(appname.Value, webserver.Value,  mbean.Value, []string{})
+    mts, err = getMetrics(jmxAppName.Value, jmxServer.Value,  jmxMBean.Value, []string{})
+
+//    log.Println("GetMereicsTypes mts =", mts, "err =",err)
 
     return mts, err
 }
 
 //GetMetricTypes API definition
 func (j *Jmx) GetMetricTypes(cfg plugin.ConfigType) (mts []plugin.MetricType, err error) {
-    appnamecfg := cfg.Table()["jmx_app_name"]
-    webservercfg := cfg.Table()["jmx_connection_url"]
-    mbeancfg := cfg.Table()["jmx_mbean_cfg"]
 
-    //log.Println("appnamecfg",appnamecfg,"webservercfg =",webservercfg,"mbeancfg=",mbeancfg)
+    jmxAppNameCfg := cfg.Table()["jmx_app_name"]
+    jmxServerUrlCfg := cfg.Table()["jmx_connection_url"]
+    jmxMBeanCfg := cfg.Table()["jmx_mbean_cfg"]
 
-    if appnamecfg == nil || webservercfg == nil || mbeancfg == nil {
-       return nil, errConfigReadError
+
+    if jmxAppNameCfg == nil || jmxServerUrlCfg == nil || jmxMBeanCfg == nil {
+       return nil, ErrorConfigRead
     }
 
-    webserver, ok := webservercfg.(ctypes.ConfigValueStr)
+    jmxServer, ok := jmxServerUrlCfg.(ctypes.ConfigValueStr)
     if !ok {
-       return nil, errBadWebserver
+       return nil, ErrorJmxServerUrlCfg
     }
 
-    mbean, ok := mbeancfg.(ctypes.ConfigValueStr)
+    jmxMBean, ok := jmxMBeanCfg.(ctypes.ConfigValueStr)
     if !ok {
-       return nil, errMbeanCfg
+       return nil, ErrorJmxMBeanCfg
     }
 
-    appname, ok := appnamecfg.(ctypes.ConfigValueStr)
+    jmxAppName, ok := jmxAppNameCfg.(ctypes.ConfigValueStr)
     if !ok {
-       return nil, errAppnameCfg
+       return nil, ErrorJmxAppNameCfg
     }
 
-    mts, err = getMetrics(appname.Value, webserver.Value,  mbean.Value, []string{})
+    mts, err = getMetrics(jmxAppName.Value, jmxServer.Value,  jmxMBean.Value, []string{})
 
 //    log.Println("GetMereicsTypes mts =", mts, "err =",err)
 
@@ -359,16 +360,16 @@ func (j *Jmx) GetMetricTypes(cfg plugin.ConfigType) (mts []plugin.MetricType, er
 func (j *Jmx) GetConfigPolicy() (*cpolicy.ConfigPolicy, error) {
     cfg := cpolicy.New()
 
-    appname,_ := cpolicy.NewStringRule("jmx_app_name", true ,"jmx")
+    jmxAppName,_ := cpolicy.NewStringRule("jmx_app_name", true ,"jmx")
 
-    connrule,_ := cpolicy.NewStringRule("jmx_connection_url", true ,"http://localhost:8080/jolokia/+service:jmx:rmi:///jndi/rmi://localhost:9180/jmxrmi")
+    jmxServerUrl,_ := cpolicy.NewStringRule("jmx_connection_url", true ,"http://localhost:8080/jolokia/+service:jmx:rmi:///jndi/rmi://localhost:9180/jmxrmi")
 
-    mbeancfgrule,_ := cpolicy.NewStringRule("jmx_mbean_cfg", true ,"read,java.lang:type=Threading|read,java.lang:type=OperatingSystem")
+    jmxMBean,_ := cpolicy.NewStringRule("jmx_mbean_cfg", true ,"read,java.lang:type=Threading|read,java.lang:type=OperatingSystem")
 
     policy := cpolicy.NewPolicyNode()
-    policy.Add(appname)
-    policy.Add(connrule)
-    policy.Add(mbeancfgrule)
+    policy.Add(jmxAppName)
+    policy.Add(jmxServerUrl)
+    policy.Add(jmxMBean)
 
     cfg.Add([]string{"staples","jmx"},policy)
 
