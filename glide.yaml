@@ -1,0 +1,12 @@
+package: .
+import:
+- package: github.com/Staples-Inc/snap-plugin-collector-jmx
+  subpackages:
+  - jmx
+- package: github.com/intelsdi-x/snap
+  version: ^1.0.0
+  subpackages:
+  - control/plugin
+  - control/plugin/cpolicy
+  - core
+  - core/ctypes

@@ -1,0 +1,33 @@
+hash: cca5d467df4280b29b8467907823fb71c748c899d34002c66be2795b42f1019c
+updated: 2016-12-09T12:28:46.962782789+01:00
+imports:
+- name: github.com/intelsdi-x/snap
+  version: 8905198aaab5bfb6d50a747477ca401e3a7a33ab
+  subpackages:
+  - control/plugin
+  - control/plugin/cpolicy
+  - control/plugin/encoding
+  - control/plugin/encrypter
+  - core
+  - core/cdata
+  - core/ctypes
+  - core/serror
+  - pkg/ctree
+  - pkg/schedule
+  - pkg/stringutils
+  - scheduler/wmap
+- name: github.com/robfig/cron
+  version: 9585fd555638e77bba25f25db5c44b41f264aeb7
+- name: github.com/Sirupsen/logrus
+  version: 881bee4e20a5d11a6a88a5667c6f292072ac1963
+- name: github.com/Staples-Inc/snap-plugin-collector-jmx
+  version: 884d5a20158fcf21a617e63c0b2af34c091f1382
+  subpackages:
+  - jmx
+- name: golang.org/x/sys
+  version: 478fcf54317e52ab69f40bb4c7a1520288d7f7ea
+  subpackages:
+  - unix
+- name: gopkg.in/yaml.v2
+  version: a5b47d31c556af34a302ce5d659e6fea44d90de0
+testImports: []

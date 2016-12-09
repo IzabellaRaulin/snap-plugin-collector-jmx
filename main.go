@@ -20,7 +20,7 @@ import (
 "os"
 
 "github.com/intelsdi-x/snap/control/plugin"
-"github.com/intelsdi-x/snap-plugin-collector-jmx/jmx"
+"github.com/Staples-Inc/snap-plugin-collector-jmx/jmx"
 )
 
 func main() {
