@@ -324,6 +324,7 @@ func (j *Jmx) CollectMetrics(inmts []plugin.MetricType) ( mts []plugin.MetricTyp
 //GetMetricTypes API definition
 func (j *Jmx) GetMetricTypes(cfg plugin.ConfigType) (mts []plugin.MetricType, err error) {
 
+        log.Println("Debug, Iza")
     jmxAppNameCfg := cfg.Table()["jmx_app_name"]
     jmxServerUrlCfg := cfg.Table()["jmx_connection_url"]
     jmxMBeanCfg := cfg.Table()["jmx_mbean_cfg"]
